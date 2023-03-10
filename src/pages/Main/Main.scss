@@ -1,5 +1,36 @@
 .header_img {
-    margin-top: 86px;
+    margin-top: 40px;
+}
+
+.oauth {
+    display: flex;
+    justify-content: center;
+    margin-top: 40px;
+
+    .login {
+        padding: 10px 35px;
+        border-radius: 5px;
+        border: none;
+        background-color: rgb(231, 231, 231);
+    }
+
+    .profile {
+        display: flex;
+        gap: 10px;
+
+        .info_oauth {
+            text-align: start;
+
+            span {
+                display: block;
+                margin-bottom: 15px;
+            }
+
+            h3 {
+                margin: 0;
+            }
+        }
+    }
 }
 
 .search {

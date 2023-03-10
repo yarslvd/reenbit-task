@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import Pagination from '@mui/material/Pagination';
+import { googleLogout, useGoogleLogin } from '@react-oauth/google';
+import axios from 'axios';
 
 import Layout from "../../components/Layout/Layout";
 import Card from "../../components/Card/Card";
@@ -9,15 +11,16 @@ import './Main.scss';
 
 const Main = () => {
     const [search, setSearch] = useState(JSON.parse(sessionStorage.getItem('search')) || '');
-    const [page, setPage] = useState(1);
+    const [page, setPage] = useState(JSON.parse(sessionStorage.getItem('page')) || 1);
+    const [user, setUser] = useState([]);
+    const [profile, setProfile] = useState([]);
     const { data, isLoading, error } = useGetCharactersQuery({page, search});
-
-    console.log(data);
 
     const results = !isLoading && !error ? [...data.results].sort((a, b) => { if(a.name < b.name) return -1 }) : null;
 
     const handlePagination = (e, p) => {
         setPage(p);
+        sessionStorage.setItem('page', JSON.stringify(p));
 
         const body = document.querySelector('#root');
         body.scrollIntoView({
@@ -26,16 +29,60 @@ const Main = () => {
     }
 
     const handleSearch = (e) => {
-        sessionStorage.setItem('search', JSON.stringify(e.target.value));
         setSearch(e.target.value);
+        sessionStorage.setItem('search', JSON.stringify(e.target.value));
+    }
+
+    const login = useGoogleLogin({
+        onSuccess: (codeResponse) => { setUser(codeResponse); localStorage.setItem('token', JSON.stringify(codeResponse.access_token))},
+        onError: (error) => console.log('Login Failed:', error)
+    });
+
+    const logout = () => {
+        googleLogout();
+        setProfile(null);
+        delete localStorage.token;
     }
 
     useEffect(() => {
-        setSearch(JSON.parse(sessionStorage.getItem('search')));
-    }, [])
+        if(user) {
+            axios.get(`https://www.googleapis.com/oauth2/v1/userinfo?access_token=${user.access_token || localStorage.token}`, {
+                headers: {
+                    Authorization: `Bearer ${user.access_token}`,
+                    Accept: 'application/json'
+                }
+            })
+            .then((res) => {
+                setProfile(res.data);
+                console.log(res.data);
+            })
+            .catch((err) => {
+                console.log(err);
+                googleLogout();
+                delete localStorage.token;
+                setProfile(null);
+            });
+        }
+    }, [user]);
+
+
 
     return(
         <Layout>
+            <div className="oauth">
+                {profile ?
+                    <div className="profile">
+                        <img src={profile.picture} alt="User" />
+                        <div className="info_oauth">
+                            <h3>{profile.name}</h3>
+                            <span>{profile.email}</span>
+                            <button onClick={logout}>Log Out</button>
+                        </div>
+
+                    </div> :
+                    <button onClick={() => login()} className='login'>Sign in with Google</button>
+                }
+            </div>
             <img src="/assets/header.png" alt="Rick and Morty" className="header_img"/>
             <div className="search">
                 <input type="text" className="search-field" placeholder="Filter by name..." onChange={handleSearch} defaultValue={search}/>
@@ -50,7 +97,7 @@ const Main = () => {
                 ))}
                 {error && <h1>{error.data.error}</h1>}
             </div>
-            {!error && !isLoading && data.info.pages !== 1 && <Pagination count={data.info.pages} color="primary" onChange={handlePagination} sx={{ mb: '80px' }}/>}
+            {!error && !isLoading && data.info.pages !== 1 && <Pagination count={data.info.pages} color="primary" defaultPage={page || 1} onChange={handlePagination} sx={{ mb: '80px' }}/>}
         </Layout>
     );
 }
