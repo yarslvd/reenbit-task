@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import Pagination from '@mui/material/Pagination';
 import { googleLogout, useGoogleLogin } from '@react-oauth/google';
+import { useMediaQuery } from '@mui/material';
 import axios from 'axios';
 
 import Layout from "../../components/Layout/Layout";
@@ -16,6 +17,8 @@ const Main = () => {
     const [profile, setProfile] = useState([]);
     const { data, isLoading, error } = useGetCharactersQuery({page, search});
 
+    const mediaQuery = useMediaQuery('(max-width:600px)');
+
     const results = !isLoading && !error ? [...data.results].sort((a, b) => { if(a.name < b.name) return -1 }) : null;
 
     const handlePagination = (e, p) => {
@@ -30,6 +33,8 @@ const Main = () => {
 
     const handleSearch = (e) => {
         setSearch(e.target.value);
+        setPage(1);
+        sessionStorage.setItem('page', 1);
         sessionStorage.setItem('search', JSON.stringify(e.target.value));
     }
 
@@ -65,8 +70,6 @@ const Main = () => {
         }
     }, [user]);
 
-
-
     return(
         <Layout>
             <div className="oauth">
@@ -97,7 +100,7 @@ const Main = () => {
                 ))}
                 {error && <h1>{error.data.error}</h1>}
             </div>
-            {!error && !isLoading && data.info.pages !== 1 && <Pagination count={data.info.pages} color="primary" defaultPage={page || 1} onChange={handlePagination} sx={{ mb: '80px' }}/>}
+            {!error && !isLoading && data.info.pages !== 1 && <Pagination count={data.info.pages} color="primary" size={`${mediaQuery && 'small'}`} defaultPage={page || 1} onChange={handlePagination} sx={{ mb: '80px' }}/>}
         </Layout>
     );
 }
